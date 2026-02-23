@@ -1,11 +1,24 @@
+import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 
-DATABASE_URL = "sqlite:///./app.db"
+_db_host = os.getenv("DB_HOST", "localhost")
+_db_port = os.getenv("DB_PORT", "5432")
+_db_name = os.getenv("DB_NAME", "charity")
+_db_user = os.getenv("DB_USER", "postgres")
+_db_pass = os.getenv("DB_PASSWORD", "postgres")
+
+if os.getenv("USE_POSTGRES", "1") == "1":
+    DATABASE_URL = f"postgresql://{_db_user}:{_db_pass}@{_db_host}:{_db_port}/{_db_name}"
+    connect_args = {}
+else:
+    DATABASE_URL = "sqlite:///./app.db"
+    connect_args = {"check_same_thread": False}
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},
+    connect_args=connect_args,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -19,4 +32,3 @@ def get_db() -> Session:
         yield db
     finally:
         db.close()
-
