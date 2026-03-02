@@ -12,6 +12,7 @@
         {% if user %}
             <span>Logged in as {{ user.email }} ({{ user.role }})</span>
             <a href="/me/donations">My donations</a>
+            <a href="/top-donors">Top donors</a>
             {% if user.role == 'admin' %}
                 <a href="/admin/campaigns">Admin: campaigns</a>
             {% endif %}

@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
-from auth import get_current_user
+from auth import get_current_user, get_current_user_optional
 from db import get_db
 from models import CharityCampaign, Donation, User
 
@@ -69,4 +70,33 @@ def donate(
     return RedirectResponse(
         url=f"/campaigns/{campaign_id}",
         status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+@router.get("/top-donors", response_class=HTMLResponse)
+def top_donors(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_optional),
+):
+    donors = db.execute(
+        text("""
+        SELECT 
+            u.email,
+            COUNT(d.id) as donations_count,
+            SUM(d.amount) as total_amount
+        FROM users u
+        JOIN donations d ON u.id = d.user_id
+        GROUP BY u.id, u.email
+        ORDER BY total_amount DESC
+        LIMIT 10
+        """)
+    ).all()
+    
+    return templates.TemplateResponse(
+        "top_donors.html",
+        {
+            "request": request, 
+            "user": current_user, 
+            "donors": donors
+        }
     )

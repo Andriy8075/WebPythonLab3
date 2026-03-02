@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Top donors{% endblock %}
+
+{% block content %}
+<h2>Top 10 donors</h2>
+
+{% if donors %}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Email</th>
+                <th>Number of donations</th>
+                <th>Total amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for donor in donors %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ donor.email }}</td>
+                <td>{{ donor.donations_count }}</td>
+                <td>{{ donor.total_amount }} UAH</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>There are no donors yet.</p>
+{% endif %}
+
+<p><a href="/">← Back to main page</a></p>
+
+{% endblock %}
