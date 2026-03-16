@@ -9,12 +9,12 @@ _db_name = os.getenv("DB_NAME", "charity")
 _db_user = os.getenv("DB_USER", "postgres")
 _db_pass = os.getenv("DB_PASSWORD", "postgres")
 
-if os.getenv("USE_POSTGRES", "1") == "1":
+try:
     DATABASE_URL = f"postgresql://{_db_user}:{_db_pass}@{_db_host}:{_db_port}/{_db_name}"
     connect_args = {}
-else:
-    DATABASE_URL = "sqlite:///./app.db"
-    connect_args = {"check_same_thread": False}
+except Exception as e:
+    print(f"Error creating database engine: {e}")
+    raise e
 
 engine = create_engine(
     DATABASE_URL,
