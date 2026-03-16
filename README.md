@@ -4,6 +4,8 @@ To launch project:
 2. Run:
 
 ```bash
+git clone https://github.com/Andriy8075/WebPythonLab3.git
+cd WebPythonLab3
 docker compose up --build
 ```
 3. Open http://localhost:8080 in browser.
