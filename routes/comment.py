@@ -1,3 +1,4 @@
+from datetime import datetime
 from bson import ObjectId
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -169,3 +170,42 @@ def update_comment(
         url=f"/campaigns/{campaign_id}",
         status_code=status.HTTP_303_SEE_OTHER
     )
+
+@router.post("/comments/{comment_id}/like")
+def like_comment(
+    comment_id: str,
+    request: Request,
+    db: Database = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        oid = ObjectId(comment_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    comment = db.comments.find_one({"_id": oid})
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    likes_collection = db['comment_likes']
+    
+    likes_collection = db['comment_likes']
+
+    existing = likes_collection.find_one({
+        "comment_id": oid,
+        "user_id": ObjectId(current_user["id"])
+    })
+    
+    if existing:
+        likes_collection.delete_one({"_id": existing["_id"]})
+    else:
+        likes_collection.insert_one({
+            "comment_id": oid,
+            "user_id": ObjectId(current_user["id"]),
+            "created_at": datetime.utcnow()
+        })
+    
+    count = likes_collection.count_documents({"comment_id": oid})
+    liked = likes_collection.find_one({"comment_id": oid, "user_id": ObjectId(current_user["id"])}) is not None
+    
+    return {"count": count, "liked": liked}
