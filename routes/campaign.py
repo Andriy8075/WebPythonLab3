@@ -10,6 +10,8 @@ from auth import get_current_user, get_current_user_optional, require_admin
 from db import get_db
 from models import CharityCampaign, Donation, User
 
+from mongo import likes_collection
+
 # Validation limits
 CAMPAIGN_TITLE_MAX_LENGTH = 200
 CAMPAIGN_DESCRIPTION_MAX_LENGTH = 5000
@@ -70,6 +72,17 @@ def campaign_detail(
         .scalar()
     )
 
+    comment_ids = [c.id for c in campaign.comments]
+    likes_count = {}
+    user_likes = set()
+
+    for comment_id in comment_ids:
+        count = likes_collection.count_documents({"comment_id": comment_id})
+        likes_count[comment_id] = count
+        if current_user:
+            if likes_collection.find_one({"comment_id": comment_id, "user_id": current_user.id}):
+                user_likes.add(comment_id)
+    
     return templates.TemplateResponse(
         "campaign_detail.html",
         {
@@ -77,6 +90,8 @@ def campaign_detail(
             "user": current_user,
             "campaign": campaign,
             "total": total,
+            "likes_count": likes_count,
+            "user_likes": user_likes,
         },
     )
 

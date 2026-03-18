@@ -15,6 +15,11 @@ services:
       timeout: 5s
       retries: 5
 
+  mongo:
+    image: mongo:latest
+    volumes:
+      - mongo_data:/data/db
+
   app:
     build: .
     ports:
@@ -30,9 +35,13 @@ services:
       - DB_NAME=charity
       - DB_USER=postgres
       - DB_PASSWORD=postgres
+      - MONGO_HOST=mongo
     depends_on:
       db:
         condition: service_healthy
+      mongo:
+        condition: service_started
 
 volumes:
   postgres_data:
+  mongo_data:

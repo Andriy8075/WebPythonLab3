@@ -30,6 +30,21 @@
                    <small>({{ comment.created_at.strftime('%Y-%m-%d %H:%M') }})</small></p>
                 <p>{{ comment.content }}</p>
                 
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button onclick="likeComment({{ comment.id }})" style="background:none; border:none; font-size:1.2rem; cursor:pointer; padding:5px; display:flex; align-items:center; gap:3px;">
+                        <span id="heart-{{ comment.id }}">
+                            {% if comment.id in user_likes %}
+                                <i class="fas fa-heart" style="color: rgb(255, 0, 0);"></i>
+                            {% else %}
+                                <i class="far fa-heart" style="color: black;"></i>
+                            {% endif %}
+                        </span>
+                        <span id="count-{{ comment.id }}" style="font-size:1.2rem; color:#666; margin-left:3px;">
+                            {{ likes_count[comment.id] if comment.id in likes_count else 0 }}
+                        </span>
+                    </button>
+                </div>
+
                 {% if user and (user.id == comment.user_id or user.role == 'admin') %}
                     <div class="comment-actions">
                         <a href="/comments/{{ comment.id }}/edit">Edit</a> |
@@ -57,6 +72,29 @@
 {% else %}
     <p>To leave a comment, please <a href="/login">log in</a>.</p>
 {% endif %}
-
+    <script>
+    function likeComment(commentId) {
+        fetch(`/comments/${commentId}/like`, {method: 'POST'})
+        .then(response => {
+            console.log('Status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Data:', data);
+            
+            const heartSpan = document.getElementById(`heart-${commentId}`);
+            if (data.liked) {
+                heartSpan.innerHTML = '<i class="fas fa-heart" style="color: red;"></i>';
+            } else {
+                heartSpan.innerHTML = '<i class="far fa-heart" style="color: black;"></i>';
+            }
+            
+            document.getElementById(`count-${commentId}`).innerText = data.count;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+    </script>
 {% endblock %}
 

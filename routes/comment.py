@@ -7,6 +7,9 @@ from auth import get_current_user
 from db import get_db
 from models import Comment, CharityCampaign, User
 
+from mongo import likes_collection
+from datetime import datetime
+
 # Validation limits
 COMMENT_CONTENT_MAX_LENGTH = 1000
 COMMENT_CONTENT_MIN_LENGTH = 1
@@ -150,3 +153,33 @@ def update_comment(
         url=f"/campaigns/{comment.campaign_id}",
         status_code=status.HTTP_303_SEE_OTHER
     )
+
+@router.post("/comments/{comment_id}/like")
+def like_comment(
+    comment_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    comment = db.get(Comment, comment_id)
+    if not comment:
+        raise HTTPException(status_code=404)
+    
+    existing = likes_collection.find_one({
+        "comment_id": comment_id,
+        "user_id": current_user.id
+    })
+    
+    if existing:
+        likes_collection.delete_one({"_id": existing["_id"]})
+    else:
+        likes_collection.insert_one({
+            "comment_id": comment_id,
+            "user_id": current_user.id,
+            "created_at": datetime.utcnow()
+        })
+
+    count = likes_collection.count_documents({"comment_id": comment_id})
+    liked = likes_collection.find_one({"comment_id": comment_id, "user_id": current_user.id}) is not None
+    
+    return {"count": count, "liked": liked}
