@@ -87,11 +87,23 @@ def campaign_detail(
     )
     user_ids = {c["user_id"] for c in comments}
     users_map = {str(u["_id"]): u for u in db.users.find({"_id": {"$in": list(user_ids)}})}
+    
+    likes_collection = db['comment_likes']
+
+    likes_count = {}
+    user_likes = set()
+    
     for c in comments:
         c["id"] = str(c["_id"])
         c["user_id"] = str(c["user_id"])
         u = users_map.get(c["user_id"])
         c["user"] = {"email": u["email"]} if u else {"email": "?"}
+
+        count = likes_collection.count_documents({"comment_id": c["_id"]})
+        likes_count[c["id"]] = count
+        if current_user:
+            if likes_collection.find_one({"comment_id": c["_id"], "user_id": ObjectId(current_user["id"])}):
+                user_likes.add(c["id"])
 
     campaign_doc = _campaign_doc(campaign)
     campaign_doc["comments"] = comments
@@ -103,6 +115,8 @@ def campaign_detail(
             "user": current_user,
             "campaign": campaign_doc,
             "total": total,
+            "likes_count": likes_count,
+            "user_likes": user_likes,
         },
     )
 
