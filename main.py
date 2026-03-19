@@ -2,13 +2,10 @@ from fastapi import FastAPI
 from scalar_fastapi import get_scalar_api_reference
 from starlette.middleware.sessions import SessionMiddleware
 
-from db import Base, engine
 from routes.user import router as user_router
 from routes.campaign import router as campaign_router
 from routes.donation import router as donation_router
 from routes.comment import router as comment_router
-
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Charity Fundraising API",

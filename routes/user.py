@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Depends, Form, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func
-from sqlalchemy.orm import Session
+from pymongo.database import Database
 
-from auth import get_current_user, get_password_hash, get_current_user_optional, verify_password
+from auth import get_password_hash, verify_password
 from db import get_db
-from models import User
 
 # Validation limits
 EMAIL_MAX_LENGTH = 64
@@ -29,7 +27,7 @@ def register(
     request: Request,
     email: str = Form(..., max_length=EMAIL_MAX_LENGTH),
     password: str = Form(..., min_length=1, max_length=PASSWORD_MAX_LENGTH),
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
 ):
     email = email.strip().lower()
     if not email:
@@ -39,7 +37,7 @@ def register(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    existing = db.query(User).filter(User.email == email).first()
+    existing = db.users.find_one({"email": email})
     if existing:
         return templates.TemplateResponse(
             "register.html",
@@ -50,19 +48,18 @@ def register(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    is_first_user = db.query(func.count(User.id)).scalar() == 0
+    is_first_user = db.users.count_documents({}) == 0
     role = "admin" if is_first_user else "user"
 
-    user = User(
-        email=email,
-        hashed_password=get_password_hash(password),
-        role=role,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    doc = {
+        "email": email,
+        "hashed_password": get_password_hash(password),
+        "role": role,
+    }
+    result = db.users.insert_one(doc)
+    user_id = str(result.inserted_id)
 
-    request.session["user_id"] = user.id
+    request.session["user_id"] = user_id
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -79,11 +76,11 @@ def login(
     request: Request,
     email: str = Form(..., max_length=EMAIL_MAX_LENGTH),
     password: str = Form(..., max_length=PASSWORD_MAX_LENGTH),
-    db: Session = Depends(get_db),
+    db: Database = Depends(get_db),
 ):
     email = email.strip().lower()
-    user = db.query(User).filter(User.email == email).first()
-    if not user or not verify_password(password, user.hashed_password):
+    user = db.users.find_one({"email": email})
+    if not user or not verify_password(password, user["hashed_password"]):
         return templates.TemplateResponse(
             "login.html",
             {
@@ -93,7 +90,7 @@ def login(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    request.session["user_id"] = user.id
+    request.session["user_id"] = str(user["_id"])
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 

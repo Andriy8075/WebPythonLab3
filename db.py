@@ -1,34 +1,22 @@
 import os
+from typing import Generator
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base, Session
+from pymongo import MongoClient
+from pymongo.database import Database
 
-_db_host = os.getenv("DB_HOST", "localhost")
-_db_port = os.getenv("DB_PORT", "5432")
-_db_name = os.getenv("DB_NAME", "charity")
-_db_user = os.getenv("DB_USER", "postgres")
-_db_pass = os.getenv("DB_PASSWORD", "postgres")
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+MONGODB_DB = os.getenv("MONGODB_DB", "charity")
 
-if os.getenv("USE_POSTGRES", "1") == "1":
-    DATABASE_URL = f"postgresql://{_db_user}:{_db_pass}@{_db_host}:{_db_port}/{_db_name}"
-    connect_args = {}
-else:
-    DATABASE_URL = "sqlite:///./app.db"
-    connect_args = {"check_same_thread": False}
-
-engine = create_engine(
-    DATABASE_URL,
-    connect_args=connect_args,
-)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base = declarative_base()
+_client: MongoClient | None = None
 
 
-def get_db() -> Session:
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def get_client() -> MongoClient:
+    global _client
+    if _client is None:
+        _client = MongoClient(MONGODB_URI)
+    return _client
+
+
+def get_db() -> Generator[Database, None, None]:
+    client = get_client()
+    yield client[MONGODB_DB]
